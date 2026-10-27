@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge, Button, FluentProvider, Menu, MenuItemRadio, MenuList, MenuPopover, MenuTrigger,
-  MessageBar, MessageBarBody, Tab, TabList, Tooltip, webDarkTheme, webLightTheme,
+  MessageBar, MessageBarBody, Tab, TabList, webDarkTheme, webLightTheme,
 } from "@fluentui/react-components";
 import {
   CalendarLtr24Regular, Color24Regular, Dismiss20Regular, Home24Regular,
@@ -136,8 +136,8 @@ export function App() {
         <main className="main">
           <header className="topbar"><div className="top-title">工作空间&nbsp; / &nbsp;<strong>{labels[view]}</strong></div><div className="top-actions">
             <Badge appearance="tint" color={active ? "success" : connected ? "informative" : "warning"}>{selected}</Badge>
-            <Menu checkedValues={{theme: [mode]}} onCheckedValueChange={(_, data) => setTheme(data.checkedItems[0] as ThemeMode)}>
-              <MenuTrigger disableButtonEnhancement><Tooltip content="外观主题" relationship="label"><Button appearance="subtle" icon={<Color24Regular />} aria-label="外观主题" /></Tooltip></MenuTrigger>
+            <Menu inline checkedValues={{theme: [mode]}} onCheckedValueChange={(_, data) => setTheme(data.checkedItems[0] as ThemeMode)}>
+              <MenuTrigger disableButtonEnhancement><Button appearance="subtle" icon={<Color24Regular />} aria-label="外观主题" title="外观主题" /></MenuTrigger>
               <MenuPopover><MenuList><MenuItemRadio name="theme" value="system">跟随系统</MenuItemRadio><MenuItemRadio name="theme" value="light">浅色</MenuItemRadio><MenuItemRadio name="theme" value="dark">深色</MenuItemRadio></MenuList></MenuPopover>
             </Menu>
           </div></header>
