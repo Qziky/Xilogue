@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "sample_interval_seconds": 5.0,
+  "foreground_stabilize_seconds": 0.6,
+  "poll_interval_seconds": 0.25,
+  "idle_policy": "pause",
+  "idle_seconds": 90.0,
+  "image_quota_mib": 512,
+  "retention_days": 7,
+  "image_webp_quality": 78,
+  "thumbnail_width": 320,
+  "thumbnail_height": 180,
+  "grid_columns": 16,
+  "grid_rows": 9,
+  "pixel_difference": 14,
+  "duplicate_mae": 0.8,
+  "duplicate_ratio": 0.003,
+  "duplicate_tile_mae": 3.0,
+  "large_change_ratio": 0.04,
+  "candidate_capacity": 2,
+  "event_capacity": 300,
+  "maintenance_seconds": 60.0,
+  "ocr_enabled": true,
+  "ocr_threads": 2,
+  "excluded_apps": [
+    "1password.exe",
+    "bitwarden.exe",
+    "keepass.exe",
+    "keepassxc.exe",
+    "passwordmanager.exe"
+  ]
+}

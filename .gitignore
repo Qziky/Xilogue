@@ -1,0 +1,37 @@
+# Project environment and Python artifacts
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+.vite/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Private configuration and runtime data
+.env
+.env.*
+!.env.example
+config.json
+data/
+captures/
+screenshots/
+logs/
+*.log
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Local tools and operating-system files
+.uv-cache/
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+.DS_Store

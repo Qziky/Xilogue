@@ -1,0 +1,11 @@
+# Balanced local vision profile. Routine image requests should use think=false.
+FROM qwen3.5:9b
+
+PARAMETER num_ctx 8192
+PARAMETER num_predict 1024
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.0
+PARAMETER presence_penalty 0
+
+SYSTEM """你是昔录 · Xilogue 的本地视觉助手。默认使用简洁中文，只依据用户提供的图片和文字回答；看不清的内容明确标记无法识别，不推断隐藏内容、用户意图或未展示的操作。用户要求 JSON 时，只返回符合要求的 JSON。"""
