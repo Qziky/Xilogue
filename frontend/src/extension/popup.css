@@ -1,15 +1,15 @@
 :root { font-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif; }
 * { box-sizing: border-box; }
 html, body, #root { width: 360px; margin: 0; }
-.popup { --surface:#f6f9fc; --card:#fff; --line:#dfe7ef; --muted:#647587; min-height: 100%; background:var(--surface); }
-.popup[data-mode="dark"] { --surface:#1d242c; --card:#29323c; --line:#414c57; --muted:#aebcca; }
-.popup-header { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--line); }
+.fui-FluentProvider.popup { min-height: 100%; background:var(--colorNeutralBackground2); }
+.popup[data-mode="light"] { color-scheme:light; }
+.popup[data-mode="dark"] { color-scheme:dark; }
+.popup-header { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--colorNeutralStroke2); }
 .popup-header img { width:38px; height:38px; }
 .popup-header strong, .popup-header span { display:block; }
 .popup-header strong { font-size:14px; }
-.popup-header span { font-size:11px; color:var(--muted); margin-top:3px; }
+.popup-header span { font-size:11px; color:var(--colorNeutralForeground3); margin-top:3px; }
 .popup-content { display:grid; gap:12px; padding:18px; }
 .popup-content h1 { font-size:21px; margin:0; }
-.popup-content p { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
-.popup-card { background:var(--card); border:1px solid var(--line); }
-.popup-note { border-top:1px solid var(--line); padding-top:12px; }
+.popup-content p { margin:0; color:var(--colorNeutralForeground3); font-size:12px; line-height:1.6; }
+.popup-note { border-top:1px solid var(--colorNeutralStroke2); padding-top:12px; }
