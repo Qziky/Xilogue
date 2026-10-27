@@ -2,6 +2,7 @@ export type RunState = "stopped" | "running" | "pausing" | "paused" | "closing" 
 export type JsonObject = Record<string, unknown>;
 
 export interface Status {
+  ai_provider?:string; ai_destination?:string;
   state: RunState; mode: string; reason: string; last_error: string; config_error: string;
   target: {app_name: string; title: string} | null; queue: number;
   counts: Record<string, number>; storage: Record<string, number>;

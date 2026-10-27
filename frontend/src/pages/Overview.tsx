@@ -29,7 +29,7 @@ export function Overview({events}: {events: Status["events"]}) {
   const analysisOnly = state === "running" && (mode === "analysis_only" || mode === "index_only");
   const modelActive = !!analysis?.provider_active || !!status?.model_queries;
   return <div className="page-stack">
-    <div className="page-head"><div><div className="eyebrow">YOUR LOCAL MEMORY</div><h1>采集概览</h1><p className="lead">你的记忆，留在这台设备。由你决定何时开始。</p></div>
+    <div className="page-head"><div><div className="eyebrow">YOUR LOCAL MEMORY</div><h1>采集概览</h1><p className="lead">采集与存储留在本机，由你决定何时开始及是否使用 API 分析。</p></div>
       <div className="actions"><Button appearance="secondary" icon={<Pause20Regular />} disabled={!connected || state !== "running"} onClick={() => void control("pause")}>暂停</Button>
         <Button appearance="primary" icon={<Play20Filled />} disabled={!connected || !editable || busy || !!status?.config_error} onClick={() => void control("start")}>{state === "paused" && mode === "capture" ? "恢复采集" : "开始采集"}</Button>
         <Button appearance="subtle" icon={<Power20Regular />} disabled={!connected || state === "closing" || state === "closed"} onClick={() => void control("exit")}>退出程序</Button></div></div>
@@ -53,6 +53,7 @@ export function Overview({events}: {events: Status["events"]}) {
           <div><dt>最后错误</dt><dd>{analysis?.cleanup_error || analysis?.last_error || status?.last_error || status?.config_error || "无"}</dd></div>
         </dl>
         <p className="caption">模型：{modelActive ? "使用中 / 待释放" : "无活动会话"}{analysis?.cleanup_error || status?.model_cleanup_pending ? " · 释放尚未确认" : ""} · 分析待处理 {analysis?.jobs?.pending || 0}</p>
+        <p className="caption">摘要服务：{status?.ai_destination || "本机 Ollama"}{status?.ai_provider === "openai_compatible" ? " · 仅按已保存授权发送文字" : ""}</p>
         <div className="caption">变化指标：{Object.entries(status?.metrics || {}).filter(([,v]) => typeof v === "number").map(([k,v]) => `${k}=${v.toFixed(3)}`).join(" · ") || "—"}</div>
         <div className="actions-vertical"><Button disabled={!connected || !editable || busy || !ocr || !!status?.config_error} onClick={() => void control("process-ocr")}>仅识别已保存图片</Button><Button icon={<ArrowClockwise20Regular />} disabled={!connected || !editable || busy} onClick={() => void control("retry-ocr")}>重试失败的 OCR 任务</Button></div>
         <p className="caption">{ocrOnly ? "仅识别本地图片，批次结束后自动暂停。" : ocr?.model_loaded && (state === "paused" || state === "pausing") ? "旧结果已被阻止提交；推理结束后释放会话。" : ocr?.model_loaded ? "OCR 会话已加载。" : "OCR 会话未加载，可单独处理本地图片。"}</p>

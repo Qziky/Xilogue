@@ -101,8 +101,10 @@ class SemanticStorage:
             return job
 
     def release_embedding(self, job, error=None):
-        due = datetime.now(UTC) + timedelta(
-            seconds=min(60, 5 * 2 ** job["attempts"]) if error else 0
+        due = (
+            datetime.now(UTC) + timedelta(seconds=min(60, 5 * 2 ** job["attempts"]))
+            if error
+            else datetime.fromisoformat(job["next_attempt_utc"])
         )
         with self.lock, self.db:
             self.db.execute(

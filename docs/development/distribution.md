@@ -10,7 +10,7 @@
 
 `uv run --locked python scripts/build_windows.py` 在时间戳 `dist/` 内生成 Windows x64 onedir、portable ZIP、SHA256SUMS 和 build-info。含 Python 3.11、预构建 Fluent 静态页面、扩展 ZIP 素材、RapidOCR 模型和原生库、文档、锁文件、项目根目录 LICENSE 及依赖许可证；运行无需 Node.js 或 CDN。Windows 可执行文件、托盘、网页和扩展使用同一“记忆窗口”图标。前端运行依赖的完整许可文本位于包内 `assets/FRONTEND-LICENSES.txt`，前端源码与 npm 锁文件也随包提供，不含 node_modules。包的 build-info 记录版本、Git 修订、dirty 状态、精确依赖；当前为未签名开发分发，不承诺 SmartScreen 放行。打包后必须做下述入口/OCR/迁移检查，不能把构建成功当运行通过。
 
-采集、OCR、分组、文字搜索、浏览和备份可以离线运行。Ollama 可执行文件及 9B/嵌入模型没有塞进分发包；分析/向量需预先安装本地 Ollama 并准备模型。设置 embedding_models_dir 为已有离线缓存，或显式配置使用本机已有服务。模型缺失会显示错误，应用不转云端、不自动下载。
+采集、OCR、分组、文字搜索、浏览和备份可以离线运行。Ollama 可执行文件及 9B/嵌入模型没有塞进分发包；本地分析/向量需预先安装 Ollama 并准备模型。设置 embedding_models_dir 为已有离线缓存，或显式配置使用本机已有服务。也可按 [AI 提供商](analysis.md) 主动选择 API，此方式需要网络及相应服务凭据；本地模型缺失不自动转云端或下载。
 
 解压 ZIP 可直接运行 exe。安装：从解压目录执行 `powershell -File maintenance/install.ps1`，安装到 `%LOCALAPPDATA%\Programs\Xilogue` 并创建开始菜单快捷方式；不自动启动。更新先退出，再从**新解压包**执行同脚本加 `-Update`，校验文件摘要，保留上版为 `Xilogue.previous`；已有 previous 时先人工保管/移走以免覆盖。升级前先备份数据，因为数据库 schema 只向前迁移，不能只换旧 exe 回滚新版数据库。
 

@@ -122,7 +122,8 @@ export function App() {
   const selected = !connected && !closing ? "连接不可用" : closing ? "正在退出" : stateLabel;
   const active = connected && status?.state === "running";
 
-  return <FluentProvider theme={dark ? webDarkTheme : webLightTheme} className="app-root" data-mode={dark ? "dark" : "light"}>
+  return <FluentProvider theme={dark ? webDarkTheme : webLightTheme}>
+    <div className="app-root" data-mode={dark ? "dark" : "light"}>
     <UiContext.Provider value={context}>
       <div className="shell">
         <aside className="sidebar">
@@ -131,7 +132,7 @@ export function App() {
           <TabList vertical selectedValue={view} onTabSelect={(_, data) => setView(data.value as View)} className="nav-tabs" aria-label="主导航">
             {navigation.map(([value, icon]) => <Tab key={value} value={value} icon={icon}>{labels[value]}</Tab>)}
           </TabList>
-          <div className="side-bottom"><strong><ShieldCheckmark20Regular /> 数据留在本机</strong><span>由你决定何时开始、暂停和清理。</span></div>
+          <div className="side-bottom"><strong><ShieldCheckmark20Regular /> 数据由你掌控</strong><span>由你决定何时采集、如何分析和清理。</span></div>
         </aside>
         <main className="main">
           <header className="topbar"><div className="top-title">工作空间&nbsp; / &nbsp;<strong>{labels[view]}</strong></div><div className="top-actions">
@@ -157,5 +158,6 @@ export function App() {
       <DetailDialog id={recordId} onClose={closeRecord} />
       {message && <div className="toast-host"><MessageBar intent={message.error ? "error" : "success"} role="status"><MessageBarBody>{message.text}</MessageBarBody><Button appearance="subtle" size="small" icon={<Dismiss20Regular />} aria-label="关闭提示" onClick={() => setMessage(null)} /></MessageBar></div>}
     </UiContext.Provider>
+    </div>
   </FluentProvider>;
 }

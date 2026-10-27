@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from xilogue.processing.ollama import ProviderError
+from xilogue.processing.providers import API_ERRORS
 
 
 class AnalysisWorker:
@@ -22,6 +23,8 @@ class AnalysisWorker:
         }
         self.provider = None
         self.provider_role = None
+        self.provider_config = None
+        self.provider_epoch = None
         self._discover_at = 0
 
     def snapshot(self):
@@ -74,6 +77,8 @@ class AnalysisWorker:
             self.provider = None
         self.status(provider_active=False, cleanup_error="")
         self.provider_role = None
+        self.provider_config = None
+        self.provider_epoch = None
 
     def run(self):
         stop = self.engine._worker_stop
@@ -112,7 +117,11 @@ class AnalysisWorker:
                         continue
                     if not job["evidence"]:
                         raise ValueError("no_text_evidence")
-                    if self.provider is not None and self.provider_role != prefix:
+                    if self.provider is not None and (
+                        self.provider_role != prefix
+                        or self.provider_config != self.engine.config
+                        or self.provider_epoch != epoch
+                    ):
                         self.release_provider()
                     if self.provider is None:
                         factory = (
@@ -121,6 +130,8 @@ class AnalysisWorker:
                             else self.factory
                         )
                         self.provider = factory(self.engine.config)
+                        self.provider_config = self.engine.config
+                        self.provider_epoch = epoch
                         self.provider_role = prefix
                         self.status(provider_active=True)
                     self.status(state="processing")
@@ -158,7 +169,11 @@ class AnalysisWorker:
                                 )
                             else:
                                 self.store.finish_analysis(
-                                    job, payload, self.engine.config.ai_model
+                                    job,
+                                    payload,
+                                    getattr(
+                                        self.provider, "analysis_model", self.engine.config.ai_model
+                                    ),
                                 )
                                 if capture:
                                     zone = self.engine.config.review_timezone
@@ -175,7 +190,7 @@ class AnalysisWorker:
                         if self.snapshot()["cleanup_error"]
                         else "analysis_" + type(exc).__name__
                     )
-                    if isinstance(exc, ProviderError) and exc.code in {
+                    if isinstance(exc, ProviderError) and exc.code in API_ERRORS | {
                         "ollama_unavailable",
                         "local_model_missing",
                         "remote_model_rejected",

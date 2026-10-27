@@ -177,7 +177,11 @@ class AnalysisStorage:
 
     def release_analysis(self, job, error=None):
         now = datetime.now(UTC)
-        due = now + timedelta(seconds=min(60, 5 * 2 ** job["attempts"])) if error else now
+        due = (
+            now + timedelta(seconds=min(60, 5 * 2 ** job["attempts"]))
+            if error
+            else datetime.fromisoformat(job["next_attempt_utc"])
+        )
         with self.lock, self.db:
             self.db.execute(
                 """UPDATE analysis_jobs SET status=?,token=NULL,attempts=attempts-?,last_error=?,

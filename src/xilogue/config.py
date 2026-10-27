@@ -8,10 +8,44 @@ import os
 import re
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 
 class ConfigError(ValueError):
     """A readable configuration error safe to show before capture starts."""
+
+
+def api_base_url(value: str) -> str:
+    """Validate user-selected destinations without accepting credentials in URLs."""
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+        if (
+            not value
+            or len(value) > 2048
+            or value != value.strip()
+            or any(ord(char) < 33 or ord(char) > 126 for char in value)
+            or "\\" in value
+            or parts.username is not None
+            or parts.password is not None
+            or parts.query
+            or parts.fragment
+            or "?" in value
+            or "#" in value
+            or not parts.hostname
+            or parts.scheme not in ("http", "https")
+            or (port is not None and not 1 <= port <= 65535)
+            or (parts.scheme == "http" and parts.hostname not in ("127.0.0.1", "::1", "localhost"))
+            or any(segment in (".", "..") for segment in parts.path.split("/"))
+            or "%" in parts.path
+            or parts.path.rstrip("/").endswith(("/chat/completions", "/embeddings"))
+        ):
+            raise ValueError
+        return urlunsplit((parts.scheme, parts.netloc.lower(), parts.path.rstrip("/"), "", ""))
+    except (ValueError, TypeError) as exc:
+        raise ConfigError(
+            "API 基址需为无凭据、查询参数的 HTTPS URL；HTTP 仅限本机回环，填写 API 根路径"
+        ) from exc
 
 
 @dataclass(frozen=True)
@@ -43,11 +77,22 @@ class Config:
     session_max_seconds: float = 3600.0
     session_title_similarity: float = 0.65
     ai_enabled: bool = False
+    ai_provider: str = "ollama"
+    ai_base_url: str = ""
+    ai_api_key_env: str = ""
+    ai_remote_consent: bool = False
+    ai_response_format: str = "json_object"
+    ai_max_tokens: int = 2048
+    ai_token_parameter: str = "max_tokens"
     ai_model: str = "recorder-vision:balanced"
     ai_timeout_seconds: float = 120.0
     ai_stable_seconds: float = 60.0
     review_timezone: str = "Asia/Shanghai"
     embedding_model: str = "embeddinggemma:latest"
+    embedding_provider: str = "ollama"
+    embedding_base_url: str = ""
+    embedding_api_key_env: str = ""
+    embedding_remote_consent: bool = False
     semantic_enabled: bool = False
     embedding_port: int = 0
     embedding_models_dir: str = ""
@@ -143,14 +188,31 @@ class Config:
             ZoneInfo(c.review_timezone)
         except (ValueError, ZoneInfoNotFoundError) as exc:
             raise ConfigError("review_timezone 必须为有效 IANA 时区") from exc
-        for model in (c.ai_model, c.embedding_model):
-            if not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,120}", model) or ":cloud" in model:
-                raise ConfigError("模型名必须为本地 Ollama 模型标识")
+        for prefix, model in (("ai", c.ai_model), ("embedding", c.embedding_model)):
+            provider = getattr(c, prefix + "_provider")
+            if provider not in ("ollama", "openai_compatible"):
+                raise ConfigError("AI 提供商须为 ollama 或 openai_compatible")
+            if not re.fullmatch(r"[A-Za-z0-9_.:/-]{1,120}", model):
+                raise ConfigError("模型 ID 必须为 1–120 位字母、数字或 _ . : / -")
+            if provider == "ollama" and ":cloud" in model:
+                raise ConfigError("本地 Ollama 不接受云端模型标识")
+            base = getattr(c, prefix + "_base_url")
+            if base or provider == "openai_compatible":
+                values[prefix + "_base_url"] = api_base_url(base)
+            env = getattr(c, prefix + "_api_key_env")
+            if env and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,119}", env):
+                raise ConfigError("API Key 环境变量名称无效")
+        if c.ai_response_format not in ("json_object", "json_schema", "text"):
+            raise ConfigError("AI 输出模式须为 json_object、json_schema 或 text")
+        if not 256 <= c.ai_max_tokens <= 32768:
+            raise ConfigError("AI 输出上限范围为 256–32768 token")
+        if c.ai_token_parameter not in ("max_tokens", "max_completion_tokens"):
+            raise ConfigError("AI token 参数须为 max_tokens 或 max_completion_tokens")
         if c.embedding_port not in (0, 11434, 11435):
             raise ConfigError("embedding_port 为 0（独立服务）或 11434/11435（已有本地服务）")
         if len(c.embedding_models_dir) > 4096 or "\0" in c.embedding_models_dir:
             raise ConfigError("embedding_models_dir 路径无效")
-        return c
+        return cls(**values)
 
     def to_dict(self) -> dict:
         return {f.name: getattr(self, f.name) for f in fields(self)}

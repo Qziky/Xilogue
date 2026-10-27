@@ -1,8 +1,8 @@
 # 测试与验收
 
-更新：2026-10-27。P0–P7 路线开发已落地，完整回归 221 项通过，历史 P1 基线与实机证据仍保留。真实扩展安装、完整 Windows、日常使用与长测验收未完成，不能据此放行全部产品兼容性。
+更新：2026-10-27。P0–P7 路线开发已落地；统一提供商及自动模型目录后 Python 完整回归 283 项通过，补充旧后台提示后前端 21 项通过。既有焦点用例的历史间歇失败保留在文末记录，不据单轮通过推断已消除。历史 P1 基线与实机证据保留；真实扩展安装、完整 Windows、日常使用与长测验收未完成。
 
-2026-10-27 项目名称改为“昔录 · Xilogue”，Python 包、命令、数据标记和默认数据目录同步更名。以下更名前的运行证据仍按当时结果保留；Xilogue 新入口的自动化回归尚未重跑。
+2026-10-27 项目名称改为“昔录 · Xilogue”，Python 包、命令、数据标记和默认数据目录同步更名。以下更名前的运行证据仍按当时结果保留；更名后的 Python 自动化已在自选 API 提供商开发中重跑，不把旧名称 Windows 冻结包视为新版实机证明。
 
 ## 当前验收安排
 
@@ -320,6 +320,47 @@ Fluent 运行时样式晚于项目样式加载，同为单类选择器时覆盖�
 `npm run check`、现有 Vitest **9 passed**、`npm run build -- app` 通过。隔离合成服务的实际浏览器计算样式确认：深色卡片背景 `#252d36`、空状态文字 `#a9b5c2`；浅色背景 `#ffffff`、文字 `#647587`；两种主题空状态内边距均为 `34px 22px`，阴影均采用项目定义。桌面视口无横向溢出，8 张设置卡片均为 `display: grid`、间距 `14px`。证据位于忽略目录 `data/theme-card-fix/` 的 `browser-review.json`、`dark.png` 和 `light.png`。
 
 服务正常退出，`alive_threads=[]`、`capture_backend_created=0`、`foreground_checks=0`；没有开始桌面采集或调用模型。此次仅验证样式修复，原有 Windows 实机及长期运行待办保持待完成。
+
+## 自选 API 提供商（2026-10-27）
+
+用户要求 AI 接入 API 并自选提供商。摘要与向量独立支持本地 Ollama / OpenAI 兼容服务；使用及发送字段见 [AI 提供商](analysis.md)。无新增运行依赖，配置 version=1、schema=8 保持兼容。
+
+- Python 完整回归：`uv run --locked python -m pytest -q --tb=short`，**263 passed in 45.99s**，新增 `tests/integration/test_api_provider.py` 40 项。使用真实回环 HTTP 服务、人工合成文字和无效测试密钥，未访问真实供应商；实际 Windows DPAPI 加解密通过。旧环境的 `uv run --locked pytest` 启动器因工程移动报 trampoline 路径错误，改用同一 uv 环境的模块入口执行，没有将启动器失败算作通过。
+- 覆盖独立提供商、无授权零请求、写入前拒绝未授权手动重排且保留原摘要、HTTPS/URL 与密钥校验、密钥按用途/地址隔离和环境变量显式读取、保存失败回滚、只写密钥及备份排除、备份许可重置、无代理/无重定向、鉴权/限流等固定错误码、严格引文与向量校验、截断拒绝、合成连接测试、退出跟踪、暂停提交屏障和轮换密钥后重新创建 Provider。取消任务保留原到期时间，避免旧请求在恢复后返回使原本可处理任务被移到新批次截止时间之外。
+- `npm run check`、前端构建通过。新增 `frontend/tests/ai-settings.test.tsx` **4 passed**，覆盖显式保存/清除、密钥不回显、更换目标重置许可及环境引用、摘要/向量独立选择和显式测试请求。完整前端回归曾 13 passed，复测仍有原有焦点用例间歇失败；恢复原始用例后最后为 **11 passed、2 failed**（键盘打开后焦点返回、删除后的焦点返回），不声明全量前端稳定通过。修改本功能前已复现删除焦点用例失败；本轮没有通过跳过或放宽断言掩盖问题。
+- 隔离真实浏览器验证 `data/api-provider-ui/`：默认本地；切换 DeepSeek 摘要、保留 Ollama 向量，填写合成模型并保存成功；许可未勾选、自动处理仍关闭、没有密钥或真实外发。截图 `settings.png`；服务退出报告为 `state=closed`、`alive_threads=[]`、`capture_backend_created=0`、`foreground_checks=0`。运行期间重新构建过静态资源，报告内资源哈希为服务启动快照，不能作为最终构建哈希。
+- Ruff check / format、锁文件检查、本地文档链接、Git diff check、wheel/sdist 构建通过。Windows exe 未在本轮重打包；没有调用真实 Ollama 或付费 API，无模型加载/卸载操作。
+
+仍需用户使用自己的 API 账户和模型验证真实鉴权、额度及模型协议兼容性。供应商预设只是基址，未把合成协议测试写成各家真实 API 已通过；原有 Windows、扩展和长期运行待办不变。
+
+## 统一提供商与自动模型目录（2026-10-27）
+
+按用户要求取消独立的“接入方式”选择，Ollama、OpenAI、DeepSeek、硅基流动和自定义服务在同一提供商列表中。摘要与向量均自动获取目录，可选择、输入筛选、刷新或手填模型 ID；未保存的凭据也能读取，但不因此持久化或授权发送记录。
+
+- `uv run --locked python -m pytest -q --tb=short`：**283 passed in 55.22s**。本轮新增 `tests/integration/test_model_catalog.py` 20 项，包含真实回环 GET、无请求正文、草稿凭据不落盘、凭据按角色和目标隔离、目录缺失/鉴权/限流/重定向错误、ID 去重过滤与上限、原配置兼容、现有服务 tags、私有嵌入目录离线枚举、不启动服务或权重、并发上限及退出等待。原 40 项 API 接入检查一并通过。
+- `npm run check`、前端构建、完整 Vitest **17 passed**。AI 设置共 8 项，新增统一入口、自动获取与选模、失败保留手填/刷新、切换服务后忽略旧响应；原有焦点用例本轮通过，未改写用例或据此否认历史不稳定。
+- `tests/manual/web_fixture.py --model-catalog` 仅为合成 UI 提供假模型目录，不访问 Ollama 或真实供应商。实际浏览器确认打开设置后自动出现两项模型、选择 `synthetic-chat-large`、刷新、保存、退出；证据在 `data/model-catalog-ui/`，截图 `models.png`。服务报告的目录调用计数、零采集后端、零前台检查和清空线程可核对；源/包实现另由上述真实 HTTP 集成测试验证。
+- Ruff check/format、uv 锁检查、文档链接、Git diff check 及 wheel/sdist 构建通过，无新增依赖。没有加载真实模型、修改用户模型缓存、启动桌面采集或使用真实付费 API。目录不提供可靠的模型能力/权重版本证明；各账户与模型兼容性仍需真实配置后核对。
+
+## 模型下拉框整屏遮挡修复（2026-10-27）
+
+用户截图中的大块遮挡已在隔离合成服务复现。FluentProvider 会把自身类名带到 Portal；此前直接放在 Provider 上的 `.app-root` 包含 `min-height:100vh` 和页面背景，使绝对定位的弹层容器也占据整屏高度并拦截点击。上轮真实截图已经出现这一现象，未识别为缺陷；本轮按实际 DOM 和计算样式纠正，旧截图不作为该场景通过的证明。
+
+已将页面布局放到 Provider 内的独立 `.app-root` 容器，主题与 Portal 保留 Fluent 原行为。新增 `frontend/tests/model-popup.test.tsx` 两项回归，修复前均能复现弹层继承页面类，修复后验证摘要/向量弹层不继承整屏布局，并可用 Esc 收起。JSDOM 显式提供页面高度样式夹具，不把其结果冒充像素布局验证。
+
+`npm run check`、完整 Vitest **19 passed**、前端构建通过。真实浏览器深色摘要、浅色向量、展开后滚动及点击侧栏切换均通过：在 1264.8×720 的视口中，遮挡容器从 720px 降为 0px，深色列表自身为 450.4×74px，页面顶部命中侧栏而非弹层容器。浅色模式同样为 0px；验证后恢复原“跟随系统”主题。证据在 `data/model-dropdown-fix/browser-review.json`、`dark-open.png`、`light-open.png`。
+
+测试仅使用假模型目录与合成来源，未请求真实 API、加载模型或开始桌面采集；服务退出报告为 `state=closed`、`alive_threads=[]`、`capture_backend_created=0`、`foreground_checks=0`。Web 接口/进程回归 **39 passed**，文档链接、Git diff check 与 wheel/sdist 构建通过。原有完整 Windows、扩展和长测待办继续保留。
+
+## Ollama 模型目录与旧后台排查（2026-10-27）
+
+用户反馈模型列表获取失败。本机 `127.0.0.1:11434` 的 `/api/version`、`/api/tags`、`/api/ps` 均实际返回 200；版本 0.40.11，安装 7 个模型，默认摘要模型存在，开始和结束时加载列表均为空。11435 未监听，不影响当前摘要默认地址；默认向量配置使用项目独立模型目录。
+
+同时确认用户 Xilogue 后台从本日 16:07:14 持续运行，而自选 API、模型目录及对应路由在 17:33–17:36 才加入。后台未启用自动重载；静态前端虽已更新，现有后台仍保留旧路由。用户已明确失败发生在获取模型列表，因此需要正常退出并重启后台，不能仅刷新网页。
+
+以当前源码、独立空数据目录和禁止前台/捕获的 Monitor，通过真实本机 FastAPI 接口读取目录：摘要返回 200、7 项，向量返回 200、1 项 `embeddinggemma:latest`。证据为 `data/ollama-catalog-check/24124f38aea44e6ab135c4bff8e696a1/report.json`，结束 `state=closed`、`foreground_checks=0`、`alive_threads=[]`、`loaded_models_after=[]`；没有读取原始记忆、运行推理或向云端发请求。
+
+前端对本机模型目录/连接测试接口的 404 增加明确的后台重启说明，上游供应商 404 仍由后端按目录错误处理，不混为一谈。两项兼容错误回归通过，`npm run check`、完整 Vitest **21 passed**、前端构建通过。用户现有后台未在本轮强制终止，连接恢复需正常退出并使用新启动链接。
 
 ## 统一 Fluent 官方配色（2026-10-27）
 

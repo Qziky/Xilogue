@@ -42,6 +42,9 @@ export function createApi(token: string) {
       cache: "no-store", signal: options.signal,
     });
     if (!response.ok) {
+      if (response.status === 404 && ["/api/ai/models","/api/ai/test"].includes(path.split("?")[0])) {
+        throw new Error("当前后台缺少 AI 接口，请点击“退出程序”并重新启动 Xilogue，再刷新页面；仅刷新网页不会更新后台。");
+      }
       let info: {detail?: string; error?: string} = {};
       try { info = await response.json(); } catch { /* Avoid showing raw server content. */ }
       const key = typeof info.detail === "string" ? info.detail : info.error || "";

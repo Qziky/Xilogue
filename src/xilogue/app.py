@@ -103,8 +103,9 @@ def main(argv=None):
             try:
                 from xilogue.collector.engine import Engine
                 from xilogue.collector.windows import WindowsMonitor
+                from xilogue.processing.credentials import Credentials
                 from xilogue.processing.ocr import RapidBackend
-                from xilogue.processing.ollama import OllamaProvider
+                from xilogue.processing.providers import ProviderFactory
                 from xilogue.web import serve
 
                 engine = Engine(
@@ -113,7 +114,7 @@ def main(argv=None):
                     WindowsMonitor(),
                     restrict=lambda t: t.pid != os.getpid(),
                     ocr_backend_factory=RapidBackend,
-                    analysis_backend_factory=OllamaProvider,
+                    analysis_backend_factory=ProviderFactory(Credentials(store.root)),
                 )
                 serve(
                     engine,

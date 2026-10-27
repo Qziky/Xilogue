@@ -110,6 +110,9 @@ def main():
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--records", type=int, choices=range(1, 201), default=2)
     parser.add_argument(
+        "--model-catalog", action="store_true", help="仅返回合成模型目录，不访问服务"
+    )
+    parser.add_argument(
         "--memory", action="store_true", help="预置合成活动、摘要、回顾与向量，不运行模型"
     )
     parser.add_argument(
@@ -205,6 +208,19 @@ def main():
     try:
 
         def ready(runtime):
+            if args.model_catalog:
+
+                def synthetic_catalog(data):
+                    report["model_catalog_requests"] = report.get("model_catalog_requests", 0) + 1
+                    suffix = "chat" if data.get("role") == "analysis" else "embedding"
+                    return {
+                        "ok": True,
+                        "models": [f"synthetic-{suffix}-small", f"synthetic-{suffix}-large"],
+                        "source": "synthetic",
+                        "truncated": False,
+                    }
+
+                runtime.list_ai_models = synthetic_catalog
             if args.slow_control:
                 original = runtime.control
 

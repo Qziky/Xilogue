@@ -29,6 +29,7 @@ def install_memory_routes(app, runtime):
                     raise HTTPException(409, "index_requires_pause")
                 if runtime.config_error:
                     raise HTTPException(409, "configuration_invalid")
+                runtime.ensure_provider_allowed("embedding")
                 result = runtime.store.queue_embeddings()
                 if result["queued"]:
                     runtime.engine.start(mode="index_only")
@@ -93,6 +94,7 @@ def install_memory_routes(app, runtime):
             if body["action"] == "analyze" and set(body) <= {"action", "ids"}:
                 if runtime.engine.analysis is None:
                     raise HTTPException(409, "analysis_worker_unavailable")
+                runtime.ensure_provider_allowed("analysis")
                 result = runtime.store.queue_analysis(body.get("ids"))
                 if result["queued"]:
                     runtime.engine.start(mode="analysis_only")

@@ -4,6 +4,8 @@
 
 当前正式界面使用本地 Fluent Web UI，浏览器扩展弹窗采用同一组件库与项目图标；原有验收待办继续保留。
 
+AI 摘要和向量检索使用统一的提供商下拉框，Ollama 与其他服务并列，并可自动读取模型列表；服务地址、密钥、发送许可与测试入口见 [AI 提供商](development/analysis.md)。默认仍为本地处理。
+
 P1 后续已补齐原始记录分页、OCR 状态筛选、单条失败重试与来源删除，使用见 [Web UI 说明](development/web-ui.md)，验证结果见 [测试记录](development/testing.md)。
 
 现支持明确发起“仅识别已保存图片”，不启动采集；批次结束自动暂停并释放 OCR 会话。默认启动仍停止。
@@ -24,7 +26,7 @@ P1 后续已补齐原始记录分页、OCR 状态筛选、单条失败重试与�
 | 开发 | [P1 任务单](development/p1-plan.md) | 本地 OCR、持久任务与文字检索 |
 | 开发 | [完整开发任务单](development/full-plan.md) | 2026-10-27 授权的 P2–P7 开发、集成与验证 |
 | 开发 | [P2 活动片段](development/p2-plan.md) | 分组、代表图、来源、拆分合并及删除传播 |
-| 开发 | [本地分析](development/analysis.md) | 本地 Provider、结构化输出、引用、可恢复任务与释放 |
+| 开发 | [AI 提供商与分析](development/analysis.md) | 可选本地/API Provider、凭据、发送许可、引用、可恢复任务与释放 |
 | 开发 | [每日回顾](development/reviews.md) | 本地日界、来源、反馈、修正与隐藏 |
 | 开发 | [相关检索与主题](development/semantic.md) | 可选本地嵌入、模型版本、相关依据及跨日主题 |
 | 开发 | [浏览器扩展](development/browser-extension.md) | 临时配对、主动可见页面、权限与限制 |

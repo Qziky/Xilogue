@@ -54,8 +54,11 @@ def export_backup(store, output):
                         raise ValueError("backup_source_image_missing")
                     entries[row["image_path"]] = image
             configuration = Path(scratch) / "config.json"
+            backup_config = store.config.to_dict()
+            for prefix in ("ai", "embedding"):
+                backup_config[prefix + "_remote_consent"] = False
             configuration.write_text(
-                json.dumps(store.config.to_dict(), ensure_ascii=False), encoding="utf-8"
+                json.dumps(backup_config, ensure_ascii=False), encoding="utf-8"
             )
             entries["config.json"] = configuration
             total = sum(p.stat().st_size for p in entries.values())

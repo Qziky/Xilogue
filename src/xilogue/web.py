@@ -19,6 +19,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
 
 from xilogue.config import Config, ConfigError, load_config
+from xilogue.processing.credentials import Credentials
+from xilogue.processing.ollama import ProviderError
 
 MAX_BODY = 65536
 SECURITY_HEADERS = {
@@ -170,9 +172,12 @@ class WebRuntime:
         self._events, self._sequence = deque(maxlen=300), 0
         self._model_condition = threading.Condition()
         self._model_tasks = 0
+        self._catalog_tasks = 0
         self._closing = False
         self._failed_providers = []
+        self._catalog_slots = threading.BoundedSemaphore(2)
         self.desktop = None
+        self.credentials = Credentials(store.root)
         from xilogue.web_browser import BrowserBridge
 
         self.browser = BrowserBridge(self)
@@ -221,6 +226,10 @@ class WebRuntime:
         snap["config_error"] = self.config_error
         snap["notice"] = self.notice() if self.notice else None
         snap["desktop"] = self.desktop.snapshot() if self.desktop else None
+        snap["ai_provider"] = self.engine.config.ai_provider
+        snap["ai_destination"] = (
+            self.engine.config.ai_base_url if snap["ai_provider"] != "ollama" else "本机 Ollama"
+        )
         with self._model_condition:
             snap["model_queries"] = self._model_tasks
             snap["model_cleanup_pending"] = len(self._failed_providers)
@@ -241,6 +250,8 @@ class WebRuntime:
             if action in ("start", "process-ocr", "process-analysis"):
                 if self.config_error:
                     raise HTTPException(409, "configuration_invalid")
+                if action == "process-analysis":
+                    self.ensure_provider_allowed("analysis")
                 self.engine.start(
                     mode={"process-ocr": "ocr_only", "process-analysis": "analysis_only"}.get(
                         action, "capture"
@@ -265,6 +276,14 @@ class WebRuntime:
             self._commands.release()
         return {"state": self.engine.snapshot()["state"]}
 
+    def ensure_provider_allowed(self, role):
+        prefix = "ai" if role == "analysis" else "embedding"
+        config = self.engine.config
+        if getattr(config, prefix + "_provider") != "ollama" and not getattr(
+            config, prefix + "_remote_consent"
+        ):
+            raise HTTPException(409, "api_consent_required")
+
     def save_config(self, data):
         if not self._commands.acquire(blocking=False):
             raise HTTPException(409, "command_busy")
@@ -272,7 +291,27 @@ class WebRuntime:
         try:
             if self.engine.snapshot()["state"] not in ("stopped", "paused"):
                 raise HTTPException(409, "save_requires_pause")
+            if not isinstance(data, dict):
+                raise ConfigError("配置必须为 JSON 对象")
+            data = dict(data)
+            updates = []
+            for role, prefix in (("analysis", "ai"), ("embedding", "embedding")):
+                key = prefix + "_api_key"
+                if key in data:
+                    updates.append((role, prefix, data.pop(key)))
             config = Config.from_dict(data)
+            changes = []
+            for role, prefix, key in updates:
+                if getattr(config, prefix + "_provider") != "openai_compatible":
+                    raise ConfigError("请先选择 API 提供商")
+                if key is not None and (
+                    not isinstance(key, str)
+                    or not key
+                    or len(key) > 4096
+                    or any(ord(char) < 33 or ord(char) > 126 for char in key)
+                ):
+                    raise ConfigError("API Key 格式无效")
+                changes.append((role, getattr(config, prefix + "_base_url"), key))
             temporary = self.config_path.with_name(
                 "." + self.config_path.name + "." + secrets.token_hex(8)
             )
@@ -280,7 +319,8 @@ class WebRuntime:
                 file.write(json.dumps(config.to_dict(), ensure_ascii=False, indent=2) + "\n")
                 file.flush()
                 os.fsync(file.fileno())
-            os.replace(temporary, self.config_path)
+            with self.credentials.transaction(changes):
+                os.replace(temporary, self.config_path)
             try:
                 self.engine.reload(config)
             except Exception:
@@ -292,6 +332,79 @@ class WebRuntime:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
             self._commands.release()
+
+    def test_ai(self, role):
+        """An explicit, potentially billed synthetic request; never reads observations."""
+        if not self._commands.acquire(blocking=False):
+            raise HTTPException(409, "command_busy")
+        provider = None
+        tracked = False
+        try:
+            if self.engine.snapshot()["state"] not in ("stopped", "paused"):
+                raise HTTPException(409, "test_requires_pause")
+            if self.config_error or self.engine.analysis is None:
+                raise HTTPException(409, "analysis_unavailable")
+            with self._model_condition:
+                if self._closing:
+                    raise HTTPException(409, "application_closing")
+                self._model_tasks += 1
+                tracked = True
+            factory = self.engine.analysis.factory
+            provider = (
+                getattr(factory, "for_embedding", factory) if role == "embedding" else factory
+            )(self.engine.config)
+            if role == "embedding":
+                from xilogue.storage.semantic import unit_vector
+
+                vectors = provider.embed(["Xilogue 合成连接测试，不含用户记录。"])
+                if len(vectors) != 1:
+                    raise ValueError("invalid_embedding_response")
+                unit_vector(vectors[0])
+            else:
+                provider.analyze(
+                    [{"id": "connection-test", "text": "Xilogue 合成连接测试，不含用户记录。"}]
+                )
+            return {"ok": True}
+        except ProviderError as exc:
+            return {"ok": False, "error": exc.code}
+        finally:
+            try:
+                if provider is not None:
+                    provider.close()
+            except Exception:
+                with self._model_condition:
+                    self._failed_providers.append(provider)
+                self.engine._event("error", "model_release_unconfirmed")
+                raise RuntimeError("model_release_unconfirmed") from None
+            finally:
+                if tracked:
+                    with self._model_condition:
+                        self._model_tasks -= 1
+                        self._model_condition.notify_all()
+                self._commands.release()
+
+    def list_ai_models(self, data):
+        from xilogue.processing.model_catalog import list_models
+
+        if not self._catalog_slots.acquire(blocking=False):
+            raise HTTPException(429, "model_list_busy")
+        tracked = False
+        try:
+            with self._model_condition:
+                if self._closing:
+                    raise HTTPException(409, "application_closing")
+                self._catalog_tasks += 1
+                tracked = True
+            try:
+                return {"ok": True, **list_models(self.engine.config, self.credentials, data)}
+            except ProviderError as exc:
+                return {"ok": False, "models": [], "error": exc.code}
+        finally:
+            if tracked:
+                with self._model_condition:
+                    self._catalog_tasks -= 1
+                    self._model_condition.notify_all()
+            self._catalog_slots.release()
 
     def image(self, ident):
         with self.store.lock:
@@ -352,7 +465,7 @@ class WebRuntime:
     def wait_model_operations(self):
         with self._model_condition:
             self._closing = True
-            while self._model_tasks:
+            while self._model_tasks or self._catalog_tasks:
                 self._model_condition.wait(0.2)
             failed, self._failed_providers = self._failed_providers, []
         for provider in failed:
@@ -443,11 +556,30 @@ def create_app(runtime):
             "config": runtime.engine.config.to_dict(),
             "data_dir": str(runtime.store.root),
             "config_path": str(runtime.config_path),
+            "api_credentials": {
+                role: runtime.credentials.configured(runtime.engine.config, role)
+                for role in ("analysis", "embedding")
+            },
         }
 
     @app.post("/api/config")
     async def save_configuration(request: Request):
         return await run_in_threadpool(runtime.save_config, await request.json())
+
+    @app.post("/api/ai/test")
+    async def test_ai(request: Request):
+        body = await request.json()
+        if (
+            not isinstance(body, dict)
+            or set(body) != {"role"}
+            or body["role"] not in ("analysis", "embedding")
+        ):
+            raise HTTPException(400, "invalid_test_role")
+        return await run_in_threadpool(runtime.test_ai, body["role"])
+
+    @app.post("/api/ai/models")
+    async def list_ai_models(request: Request):
+        return await run_in_threadpool(runtime.list_ai_models, await request.json())
 
     @app.get("/api/search")
     def search(

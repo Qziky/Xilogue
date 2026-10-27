@@ -14,7 +14,7 @@
 | D-06 | 采集与重处理异步隔离，有界队列 | 已确认；P0 候选不持久化，后续任务可恢复 |
 | D-07 | 使用 uv、根目录 .venv、pyproject、uv.lock 与 src 布局 | 已落实；运行与开发依赖均由锁文件管理 |
 | D-08 | P1 本地 OCR 采用 rapidocr-onnxruntime 1.4.4 / CPU；Web UI 见 D-04，P6 扩展使用独立配对通道 | [发布包](https://pypi.org/project/rapidocr-onnxruntime/1.4.4/) 随 wheel 提供 PP-OCRv4 检测/识别及方向模型；合成中文、英文、代码已实测，范围与限制见测试记录 |
-| D-09 | 用户要求提前准备 Ollama 本地多模态环境，平衡质量和可用延迟 | Qwen3.5 9B / recorder-vision:balanced 基线保留；P3 Provider 和带证据文本分析已实现，实测见 [分析](../development/analysis.md)；P5 独立项目嵌入服务见 [相关检索](../development/semantic.md) |
+| D-09 | Ollama 本地环境保留；2026-10-27 用户要求可自行选择 API 提供商 | 摘要和嵌入独立选择本地 Ollama 或 OpenAI 兼容接口，默认本地；API 目标、凭据、发送许可和证据校验见 [分析](../development/analysis.md)；P5 本地服务见 [相关检索](../development/semantic.md) |
 | D-10 | 项目品牌与工程标识统一为“昔录 · Xilogue” | 2026-10-27 用户确认英文项目名并明确无需兼容旧名；包、模块、命令、数据目录和标记同步更名，不迁移旧数据或旧版备份 |
 
 不默认使用整屏裁剪或 DXGI 桌面复制作为窗口捕获 fallback。候选失败时先记录原因，再评估 PyWinRT 或最小原生适配层；替代实现必须满足同一目标与隐私契约。
